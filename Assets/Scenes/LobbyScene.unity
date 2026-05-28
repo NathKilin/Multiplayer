@@ -610,6 +610,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 252399782}
+  - component: {fileID: 252399783}
   m_Layer: 5
   m_Name: LobbyManager
   m_TagString: Untagged
@@ -636,6 +637,33 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &252399783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 252399781}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 189d3cb74d87f144da1aaf4a5a110927, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LobbyUIManager
+  panelConnect: {fileID: 345809474}
+  panelLobby: {fileID: 1799696360}
+  panelRoom: {fileID: 850098662}
+  lobbyNameInput: {fileID: 335802857}
+  connectButton: {fileID: 1206966626}
+  playerCountText: {fileID: 1775018538}
+  roomNameInput: {fileID: 1622304647}
+  maxPlayersInput: {fileID: 1927711665}
+  createRoomButton: {fileID: 1482877327}
+  roomListContent: {fileID: 1803507655}
+  roomNameText: {fileID: 1605255234}
+  playerListContent: {fileID: 159158922}
+  leaveButton: {fileID: 1364498812}
+  roomEntryPrefab: {fileID: 6406235432660665485, guid: 311b1f6137db12145aa862a203f6230b, type: 3}
+  playerEntryPrefab: {fileID: 1038578433720831272, guid: c1d86de2baa69a74faf594055a206f20, type: 3}
 --- !u!1 &325370277
 GameObject:
   m_ObjectHideFlags: 0
