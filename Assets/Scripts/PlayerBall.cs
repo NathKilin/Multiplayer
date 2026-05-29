@@ -32,8 +32,13 @@ public class PlayerBall : NetworkBehaviour
 
         if (!HasInputAuthority) return;
 
-        float h = Input.GetAxisRaw("Horizontal"); // A e D
-        float v = Input.GetAxisRaw("Vertical");   // W e S
+        float h = UnityEngine.InputSystem.Keyboard.current != null ?
+            (UnityEngine.InputSystem.Keyboard.current.dKey.isPressed ? 1f :
+             UnityEngine.InputSystem.Keyboard.current.aKey.isPressed ? -1f : 0f) : 0f;
+
+        float v = UnityEngine.InputSystem.Keyboard.current != null ?
+            (UnityEngine.InputSystem.Keyboard.current.wKey.isPressed ? 1f :
+             UnityEngine.InputSystem.Keyboard.current.sKey.isPressed ? -1f : 0f) : 0f;
 
         Vector3 direction = new Vector3(h, 0, v).normalized;
         _rb.linearVelocity = direction * speed;
