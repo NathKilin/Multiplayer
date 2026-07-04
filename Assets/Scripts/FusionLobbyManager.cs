@@ -3,18 +3,31 @@ using System.Collections.Generic;
 using Fusion;
 using Fusion.Sockets;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // INetworkRunnerCallbacks = interface (contrato) do Fusion que obriga
 // esse script a ter todos os callbacks de rede implementados
 public class FusionLobbyManager : MonoBehaviour, INetworkRunnerCallbacks
 {
-    // Static Instance = qualquer script pode acessar esse manager sem precisar de referência
+    // Static Instance = qualquer script pode acessar esse manager sem precisar de referï¿½ncia
     public static FusionLobbyManager Instance { get; private set; }
 
     [SerializeField] private LobbyUIManager uiManager;
     [SerializeField] private NetworkPrefabRef playerBallPrefab; // prefab da bola em formato de rede
 
-    private NetworkRunner _runner; // o componente central do Fusion que gerencia a conexão
+    // --- Tarefa 2: troca de cena via Fusion ---
+    // Nome e build index da cena de jogo (Assets > Scenes > GameScene).
+    // O nome ï¿½ usado sï¿½ pra comparar a cena ativa, o build index ï¿½ o que o Fusion realmente usa pra carregar.
+    // IMPORTANTE: adicione a GameScene em File > Build Settings e ajuste esse index se a posiï¿½ï¿½o dela mudar.
+    [SerializeField] private string gameSceneName = "GameScene";
+    [SerializeField] private int gameSceneBuildIndex = 1;
+    [SerializeField] private string lobbySceneName = "Lobby"; // nome exato da cena de lobby (a mesma da Tarefa 1)
+
+    private NetworkRunner _runner; // o componente central do Fusion que gerencia a conexï¿½o
+
+    // Expï¿½e o runner e o status de "master" pra outros scripts da Tarefa 2 (seleï¿½ï¿½o de personagem, chat, etc.)
+    public NetworkRunner Runner => _runner;
+    public bool IsMasterClient => _runner != null && _runner.IsSharedModeMasterClient;
 
     private void Awake()
     {
@@ -22,13 +35,32 @@ public class FusionLobbyManager : MonoBehaviour, INetworkRunnerCallbacks
         else Destroy(gameObject);
     }
 
-    // --- Ações do jogador ---
+    // Alterado (Tarefa 2): esse objeto agora sobrevive ï¿½ troca de cena (DontDestroyOnLoad,
+    // ver ConnectToLobby). Isso significa que quando a gente volta pra cena de Lobby (fim de
+    // jogo -> "Sair"), uma NOVA instï¿½ncia de LobbyUIManager ï¿½ criada, mas o FusionLobbyManager
+    // continua sendo o mesmo de antes, com a referï¿½ncia antiga (destruï¿½da) pro uiManager.
+    // O LobbyUIManager novo chama isso no prï¿½prio Start() pra se reconectar.
+    public void SetUIManager(LobbyUIManager manager)
+    {
+        uiManager = manager;
+    }
+
+    // --- Aï¿½ï¿½es do jogador ---
 
     public async void ConnectToLobby(string lobbyName)
     {
         _runner = gameObject.AddComponent<NetworkRunner>();
         _runner.ProvideInput = true;
         _runner.AddCallbacks(this);
+
+        // Alterado (Tarefa 2): precisamos de um scene manager pro Fusion poder trocar
+        // de cena (lobby -> jogo) de forma sincronizada entre todos os clientes.
+        if (gameObject.GetComponent<NetworkSceneManagerDefault>() == null)
+            gameObject.AddComponent<NetworkSceneManagerDefault>();
+
+        // Alterado (Tarefa 2): esse GameObject carrega o NetworkRunner, entï¿½o ele
+        // precisa sobreviver ï¿½ troca de cena pra nï¿½o perder a conexï¿½o nem esse manager.
+        DontDestroyOnLoad(gameObject);
 
         var result = await _runner.JoinSessionLobby(SessionLobby.Custom, lobbyName);
 
@@ -74,6 +106,34 @@ public class FusionLobbyManager : MonoBehaviour, INetworkRunnerCallbacks
         uiManager.OnLeftRoom();
     }
 
+    // Tarefa 2: chamado pelo botï¿½o "Iniciar Partida", sï¿½ disponï¿½vel pro Master Client.
+    // Usa o sistema de troca de cena do Fusion (NetworkSceneManagerDefault), que sincroniza
+    // automaticamente a troca de cena pra todos os peers conectados.
+    public void StartMatch()
+    {
+        if (!IsMasterClient)
+        {
+            Debug.LogWarning("Apenas o Master Client pode iniciar a partida.");
+            return;
+        }
+
+        _runner.LoadScene(SceneRef.FromIndex(gameSceneBuildIndex), LoadSceneMode.Single, LocalPhysicsMode.None, true);
+    }
+
+    // Tarefa 2, item 6: chamado pelo botï¿½o "Sair" do menu de fim de jogo, em TODOS os clientes
+    // (cada mï¿½quina fecha a prï¿½pria sessï¿½o local e volta pro menu principal). Depois do
+    // Shutdown nï¿½o tem mais rede envolvida, entï¿½o um SceneManager.LoadScene comum resolve.
+    public async void ReturnToLobby()
+    {
+        if (_runner != null)
+        {
+            await _runner.Shutdown();
+            _runner = null;
+        }
+
+        SceneManager.LoadScene(lobbySceneName, LoadSceneMode.Single);
+    }
+
     // --- Callbacks do Fusion (chamados automaticamente pela rede) ---
 
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
@@ -84,10 +144,21 @@ public class FusionLobbyManager : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
+        // Alterado (Tarefa 2): esse callback agora atende duas cenas diferentes.
+        // Na cena de lobby o comportamento original (spawnar a bola) continua igual.
+        // Na GameScene, um jogador entrando (inclusive entrando atrasado, depois da
+        // partida jï¿½ ter comeï¿½ado) precisa ganhar um PlayerSession pra poder pedir personagem.
+        if (SceneManager.GetActiveScene().name == gameSceneName)
+        {
+            if (IsMasterClient)
+                GameSessionBootstrap.Instance?.SpawnPlayerSession(player);
+            return;
+        }
+
         // Chamado quando qualquer jogador entra na sala
         uiManager.AddPlayerToList(player);
 
-        // Só spawna (cria na rede) a bola do jogador local
+        // Sï¿½ spawna (cria na rede) a bola do jogador local
         if (player == runner.LocalPlayer)
         {
             Vector3 spawnPos = new Vector3(UnityEngine.Random.Range(-4f, 4f), 0f, 0f);
@@ -106,12 +177,30 @@ public class FusionLobbyManager : MonoBehaviour, INetworkRunnerCallbacks
         Debug.Log("Runner encerrado: " + shutdownReason);
     }
 
-    // Callbacks obrigatórios pela interface mas que não precisamos usar agora
+    // Callbacks obrigatï¿½rios pela interface mas que nï¿½o precisamos usar agora
     public void OnConnectedToServer(NetworkRunner runner) { }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
-    public void OnInput(NetworkRunner runner, NetworkInput input) { }
+
+    // Tarefa 2: coleta o input local (WASD + Espaï¿½o) e entrega pro Fusion todo tick.
+    // Isso ï¿½ necessï¿½rio porque o personagem em jogo pode estar sendo simulado numa
+    // mï¿½quina diferente da do jogador (ver comentï¿½rio em PlayerCharacter.FixedUpdateNetwork).
+    public void OnInput(NetworkRunner runner, NetworkInput input)
+    {
+        var data = new GameplayInput();
+
+        if (UnityEngine.InputSystem.Keyboard.current != null)
+        {
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            float h = kb.dKey.isPressed ? 1f : kb.aKey.isPressed ? -1f : 0f;
+            float v = kb.wKey.isPressed ? 1f : kb.sKey.isPressed ? -1f : 0f;
+            data.Move = new Vector2(h, v);
+            data.Fire = kb.spaceKey.isPressed;
+        }
+
+        input.Set(data);
+    }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
     public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }

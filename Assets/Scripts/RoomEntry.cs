@@ -16,10 +16,10 @@ public class RoomEntry : MonoBehaviour
         // Mostra o nome da sala e quantos jogadores tem
         roomInfoText.text = $"{sessionName} ({currentPlayers}/{maxPlayers})";
 
-        // Conecta o botão à função de entrar
+        // Conecta o botï¿½o ï¿½ funï¿½ï¿½o de entrar
         joinButton.onClick.AddListener(OnJoinButtonClicked);
 
-        // Desativa o botão se a sala estiver cheia
+        // Desativa o botï¿½o se a sala estiver cheia
         joinButton.interactable = currentPlayers < maxPlayers;
     }
 

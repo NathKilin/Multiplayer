@@ -1,7 +1,7 @@
 using Fusion;
 using UnityEngine;
 
-// NetworkBehaviour = versão do MonoBehaviour do Fusion,
+// NetworkBehaviour = versï¿½o do MonoBehaviour do Fusion,
 // usada em objetos que existem na rede entre todos os jogadores
 public class PlayerBall : NetworkBehaviour
 {
@@ -11,12 +11,12 @@ public class PlayerBall : NetworkBehaviour
 
     public override void Spawned()
     {
-        // Spawned() = chamado pelo Fusion quando o objeto é criado na rede,
+        // Spawned() = chamado pelo Fusion quando o objeto ï¿½ criado na rede,
         // equivalente ao Start() mas para objetos de rede
 
         _rb = GetComponent<Rigidbody>();
 
-        // Só ativa a câmera pra bola que pertence ao jogador local
+        // Sï¿½ ativa a cï¿½mera pra bola que pertence ao jogador local
         if (HasInputAuthority)
         {
             Camera.main.transform.SetParent(transform);
@@ -28,7 +28,7 @@ public class PlayerBall : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         // FixedUpdateNetwork() = equivalente ao FixedUpdate() do Unity,
-        // mas sincronizado com a rede — só roda pra quem tem controle do objeto
+        // mas sincronizado com a rede ï¿½ sï¿½ roda pra quem tem controle do objeto
 
         if (!HasInputAuthority) return;
 

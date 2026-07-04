@@ -650,9 +650,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 189d3cb74d87f144da1aaf4a5a110927, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyUIManager
+  panelProfile: {fileID: 0}
   panelConnect: {fileID: 345809474}
   panelLobby: {fileID: 1799696360}
   panelRoom: {fileID: 850098662}
+  nicknameInput: {fileID: 0}
+  colorButtons: []
+  profileConfirmButton: {fileID: 0}
   lobbyNameInput: {fileID: 335802857}
   connectButton: {fileID: 1206966626}
   playerCountText: {fileID: 1775018538}
@@ -663,6 +667,7 @@ MonoBehaviour:
   roomNameText: {fileID: 1605255234}
   playerListContent: {fileID: 159158922}
   leaveButton: {fileID: 1364498812}
+  startMatchButton: {fileID: 0}
   roomEntryPrefab: {fileID: 6406235432660665485, guid: 311b1f6137db12145aa862a203f6230b, type: 3}
   playerEntryPrefab: {fileID: 1038578433720831272, guid: c1d86de2baa69a74faf594055a206f20, type: 3}
 --- !u!114 &252399784
@@ -680,6 +685,9 @@ MonoBehaviour:
   uiManager: {fileID: 252399783}
   playerBallPrefab:
     RawGuidValue: de888fa1269917d488a3cc4a630bd3b8
+  gameSceneName: GameScene
+  gameSceneBuildIndex: 1
+  lobbySceneName: LobbyScene
 --- !u!1 &325370277
 GameObject:
   m_ObjectHideFlags: 0

@@ -6,10 +6,16 @@ using UnityEngine.UI;
 
 public class LobbyUIManager : MonoBehaviour
 {
-    [Header("Painéis")]
+    [Header("Painï¿½is")]
+    [SerializeField] private GameObject panelProfile; // Tarefa 2 (bï¿½nus): escolha de nickname + cor, antes de tudo
     [SerializeField] private GameObject panelConnect;
     [SerializeField] private GameObject panelLobby;
     [SerializeField] private GameObject panelRoom;
+
+    [Header("PanelProfile (bï¿½nus: nickname + cor)")]
+    [SerializeField] private TMP_InputField nicknameInput;
+    [SerializeField] private Button[] colorButtons; // um botï¿½o por cor da PlayerColorPalette, na mesma ordem
+    [SerializeField] private Button profileConfirmButton;
 
     [Header("PanelConnect")]
     [SerializeField] private TMP_InputField lobbyNameInput;
@@ -26,6 +32,7 @@ public class LobbyUIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI roomNameText;
     [SerializeField] private Transform playerListContent; // o Content dentro do ScrollView dos jogadores
     [SerializeField] private Button leaveButton;
+    [SerializeField] private Button startMatchButton; // Tarefa 2: sï¿½ habilitado pro Master Client
 
     [Header("Prefabs")]
     [SerializeField] private GameObject roomEntryPrefab;
@@ -34,25 +41,50 @@ public class LobbyUIManager : MonoBehaviour
     // Guarda os itens de jogador criados para poder remover depois
     private Dictionary<PlayerRef, GameObject> _playerEntries = new Dictionary<PlayerRef, GameObject>();
 
+    private int _selectedColorIndex = 0;
+
     private void Start()
     {
-        // Começa mostrando só o painel de conectar
-        ShowPanel(panelConnect);
+        // Alterado (Tarefa 2): o FusionLobbyManager agora sobrevive ï¿½ troca de cena
+        // (DontDestroyOnLoad), entï¿½o quando a cena de Lobby recarrega (ex: depois de um
+        // "Encerrar Jogo") essa ï¿½ uma instï¿½ncia NOVA de LobbyUIManager - precisa se
+        // reapresentar pro manager persistente pra nï¿½o ficar com referï¿½ncia nula.
+        FusionLobbyManager.Instance?.SetUIManager(this);
 
-        // Conecta os botões às funções
+        // Comeï¿½a mostrando o painel de perfil (bï¿½nus: nickname + cor)
+        ShowPanel(panelProfile);
+
+        // Conecta os botï¿½es ï¿½s funï¿½ï¿½es
+        profileConfirmButton.onClick.AddListener(OnProfileConfirmClicked);
+        for (int i = 0; i < colorButtons.Length; i++)
+        {
+            int colorIndex = i; // copia local pra nï¿½o vazar a variï¿½vel de loop pro closure
+            colorButtons[i].onClick.AddListener(() => _selectedColorIndex = colorIndex);
+        }
+
         connectButton.onClick.AddListener(OnConnectButtonClicked);
         createRoomButton.onClick.AddListener(OnCreateRoomButtonClicked);
         leaveButton.onClick.AddListener(OnLeaveButtonClicked);
+        startMatchButton.onClick.AddListener(OnStartMatchButtonClicked);
     }
 
-    // --- Botões ---
+    // --- Botï¿½es ---
+
+    private void OnProfileConfirmClicked()
+    {
+        string nickname = nicknameInput.text;
+        LocalPlayerSettings.Nickname = string.IsNullOrEmpty(nickname) ? "Jogador" : nickname;
+        LocalPlayerSettings.ColorIndex = _selectedColorIndex;
+
+        ShowPanel(panelConnect);
+    }
 
     private void OnConnectButtonClicked()
     {
         string lobbyName = lobbyNameInput.text;
         if (string.IsNullOrEmpty(lobbyName)) return;
 
-        SetInteractable(false); // desativa botões enquanto conecta
+        SetInteractable(false); // desativa botï¿½es enquanto conecta
         FusionLobbyManager.Instance.ConnectToLobby(lobbyName);
     }
 
@@ -61,7 +93,7 @@ public class LobbyUIManager : MonoBehaviour
         string roomName = roomNameInput.text;
         if (string.IsNullOrEmpty(roomName)) return;
 
-        // Tenta converter o texto do input pra número, usa 4 como padrão se falhar
+        // Tenta converter o texto do input pra nï¿½mero, usa 4 como padrï¿½o se falhar
         if (!int.TryParse(maxPlayersInput.text, out int maxPlayers))
             maxPlayers = 4;
 
@@ -73,6 +105,14 @@ public class LobbyUIManager : MonoBehaviour
     {
         SetInteractable(false);
         FusionLobbyManager.Instance.LeaveRoom();
+    }
+
+    // Tarefa 2: dispara a troca de cena pra GameScene. Sï¿½ o Master Client vï¿½ esse
+    // botï¿½o interativo (ver OnJoinedRoom), mas o prï¿½prio FusionLobbyManager.StartMatch
+    // tambï¿½m confere de novo antes de agir.
+    private void OnStartMatchButtonClicked()
+    {
+        FusionLobbyManager.Instance.StartMatch();
     }
 
     // --- Chamados pelo FusionLobbyManager ---
@@ -88,6 +128,10 @@ public class LobbyUIManager : MonoBehaviour
         roomNameText.text = "Sala: " + roomName;
         ShowPanel(panelRoom);
         SetInteractable(true);
+
+        // Tarefa 2: sï¿½ o Master Client pode iniciar a partida (mesma regra do botï¿½o de
+        // encerrar jogo, item 6 do enunciado).
+        startMatchButton.interactable = FusionLobbyManager.Instance.IsMasterClient;
     }
 
     public void OnLeftRoom()
@@ -109,13 +153,13 @@ public class LobbyUIManager : MonoBehaviour
 
     public void UpdateRoomList(List<SessionInfo> sessionList)
     {
-        // Apaga todos os botões de sala antigos
+        // Apaga todos os botï¿½es de sala antigos
         foreach (Transform child in roomListContent)
             Destroy(child.gameObject);
 
-        playerCountText.text = "Salas disponíveis: " + sessionList.Count;
+        playerCountText.text = "Salas disponï¿½veis: " + sessionList.Count;
 
-        // Cria um botão novo pra cada sala
+        // Cria um botï¿½o novo pra cada sala
         foreach (var session in sessionList)
         {
             GameObject entry = Instantiate(roomEntryPrefab, roomListContent);
@@ -141,10 +185,11 @@ public class LobbyUIManager : MonoBehaviour
         }
     }
 
-    // --- Utilitários ---
+    // --- Utilitï¿½rios ---
 
     private void ShowPanel(GameObject panel)
     {
+        panelProfile.SetActive(false);
         panelConnect.SetActive(false);
         panelLobby.SetActive(false);
         panelRoom.SetActive(false);
